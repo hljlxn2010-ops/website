@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BISCUIT GAME AWARDS - 年度游戏颁奖</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* ===== 基础重置与变量 ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --blue-primary: #4A90D9;
+      --blue-light: #5B8DEF;
+      --blue-dark: #2a5a8a;
+      --blue-glow: rgba(74, 144, 217, 0.4);
+      --gold: #d4a843;
+      --gold-light: #f0d78c;
+      --gold-glow: rgba(212, 168, 67, 0.5);
+      --silver: #b8c4ce;
+      --silver-light: #e2e8f0;
+      --silver-glow: rgba(184, 196, 206, 0.4);
+      --bg-deep: #070d18;
+      --bg-mid: #0a1628;
+      --bg-card: rgba(15, 28, 48, 0.85);
+      --text: #ffffff;
+      --text-dim: #8ba3be;
+      --text-muted: #5a6f85;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg-deep);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ===== 深蓝背景 + 像素网格 ===== */
+    body {
+      background: linear-gradient(135deg, #070d18 0%, #0a1628 40%, #0d1f35 70%, #070d18 100%);
+      position: relative;
+    }
+
+    /* 像素网格背景 */
+    .pixel-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(91, 141, 239, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91, 141, 239, 0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 像素星星 */
+    .pixel-star {
+      position: fixed;
+      width: 4px;
+      height: 4px;
+      background: var(--blue-light);
+      box-shadow: 0 0 6px var(--blue-glow), 0 0 12px var(--blue-glow);
+      pointer-events: none;
+      z-index: 0;
+      animation: twinkle 2.5s infinite ease-in-out;
+    }
+    .pixel-star.gold { background: var(--gold); box-shadow: 0 0 6px var(--gold-glow); }
+    .pixel-star.white { background: #fff; box-shadow: 0 0 6px rgba(255,255,255,0.3); }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* 浮动游戏元素 */
+    .game-deco {
+      position: fixed;
+      font-size: 2.2rem;
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+      animation: float 8s infinite ease-in-out;
+      filter: drop-shadow(0 0 10px rgba(91, 141, 239, 0.2));
+      image-rendering: pixelated;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      33% { transform: translateY(-20px) rotate(5deg); }
+      66% { transform: translateY(10px) rotate(-3deg); }
+    }
+
+    /* 像素块装饰 */
+    .pixel-block {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: rgba(91, 141, 239, 0.15);
+      pointer-events: none;
+      z-index: 0;
+      box-shadow: 
+        8px 0 rgba(91, 141, 239, 0.1), 
+        0 8px rgba(91, 141, 239, 0.1),
+        8px 8px rgba(91, 141, 239, 0.05);
+    }
+
+    /* ===== 主容器 ===== */
+    .capture-area {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px 100px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ===== 游戏卡片网格 ===== */
+    .games-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 48px;
+      align-items: start;
+    }
+
+    /* ===== 通用卡片样式 ===== */
+    .game-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 22px 18px 18px;
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .game-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      opacity: 0;
+    }
+
+    .game-card:hover::after { opacity: 1; }
+
+    /* 银色提名卡片 */
+    .game-card.silver {
+      border: 2px solid rgba(184, 196, 206, 0.35);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .game-card.silver::before { background: linear-gradient(90deg, transparent, var(--silver), transparent); opacity: 0.6; }
+    .game-card.silver::after { box-shadow: inset 0 0 30px var(--silver-glow); }
+    .game-card.silver:hover {
+      border-color: rgba(184, 196, 206, 0.6);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px var(--silver-glow), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    /* 金色获奖卡片 */
+    .game-card.gold {
+      border: 2px solid rgba(212, 168, 67, 0.6);
+      box-shadow: 0 4px 25px rgba(0,0,0,0.35), 0 0 25px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.08);
+      transform: scale(1.03);
+    }
+    .game-card.gold::before { background: linear-gradient(90deg, transparent, var(--gold), transparent); height: 4px; opacity: 0.9; }
+    .game-card.gold::after { box-shadow: inset 0 0 40px rgba(212,168,67,0.1); }
+    .game-card.gold:hover {
+      border-color: rgba(212, 168, 67, 0.85);
+      transform: scale(1.05) translateY(-6px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 35px var(--gold-glow), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+
+    /* 卡片顶部像素装饰 */
+    .card-pixels {
+      position: absolute;
+      top: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0.6;
+    }
+    .card-pixels span {
+      width: 4px;
+      height: 4px;
+      background: currentColor;
+    }
+    .silver .card-pixels { color: var(--silver); }
+    .gold .card-pixels { color: var(--gold); }
+
+    /* ===== 游戏名称编辑区 ===== */
+    .game-header {
+      text-align: center;
+      margin-bottom: 16px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: text;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .game-header:hover { background: rgba(255,255,255,0.03); }
+    .game-header:focus-within {
+      background: rgba(74, 144, 217, 0.08);
+      outline: 2px solid var(--blue-primary);
+      outline-offset: 2px;
+    }
+
+    .game-name-cn {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 1px;
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+    .game-card.gold .game-name-cn { color: var(--gold-light); text-shadow: 0 0 15px var(--gold-glow); }
+
+    .game-name-en {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .game-card.gold .game-name-en { color: rgba(240, 215, 140, 0.7); }
+
+    /* ===== 图片上传区域 ===== */
+    .image-area {
+      width: 100%;
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.35);
+      border: 2px dashed rgba(91, 141, 239, 0.25);
+      transition: all 0.3s;
+      cursor: pointer;
+      aspect-ratio: 3 / 4;
+      max-height: 400px;
+    }
+    .image-area:hover { border-color: var(--blue-primary); background: rgba(74, 144, 217, 0.05); }
+    .image-area.has-image {
+      border-style: solid;
+      border-color: transparent;
+      background: #050a12;
+    }
+
+    .image-input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    .game-cover {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      position: relative;
+      z-index: 2;
+    }
+
+    .upload-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+      text-align: center;
+      padding: 16px;
+      z-index: 1;
+    }
+    .upload-placeholder .icon {
+      width: 52px;
+      height: 52px;
+      margin-bottom: 12px;
+      border-radius: 12px;
+      background: rgba(91, 141, 239, 0.1);
+      border: 2px dashed rgba(91, 141, 239, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+    }
+    .upload-placeholder .hint {
+      font-size: 0.72rem;
+      margin-top: 6px;
+      opacity: 0.6;
+    }
+
+    /* 删除按钮 */
+    .btn-remove {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      transition: all 0.2s;
+      backdrop-filter: blur(4px);
+    }
+    .btn-remove:hover { background: rgba(220,60,60,0.85); transform: scale(1.1); }
+    .image-area.has-image .btn-remove { display: flex; }
+
+    /* ===== 奖项名称区域 ===== */
+    .award-section {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      margin-top: 8px;
+    }
+    .award-box {
+      display: inline-block;
+      padding: 22px 56px;
+      background: rgba(15, 28, 48, 0.9);
+      border-radius: 16px;
+      border: 1px solid rgba(212, 168, 67, 0.3);
+      box-shadow: 0 4px 25px rgba(0,0,0,0.3), 0 0 20px rgba(212,168,67,0.1);
+      cursor: text;
+      position: relative;
+      transition: all 0.3s;
+      backdrop-filter: blur(10px);
+    }
+    .award-box:hover {
+      border-color: rgba(212, 168, 67, 0.5);
+      box-shadow: 0 6px 30px rgba(0,0,0,0.35), 0 0 25px rgba(212,168,67,0.15);
+    }
+    .award-box:focus-within {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    .award-en {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .award-divider {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 10px auto;
+      border-radius: 1px;
+      box-shadow: 0 0 8px var(--gold-glow);
+    }
+    .award-cn {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 8px;
+      text-shadow: 0 0 20px var(--gold-glow), 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* ===== 左下角固定 Logo ===== */
+    .logo-fixed {
+      position: fixed;
+      bottom: 64px;
+      left: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      z-index: 100;
+      user-select: none;
+      gap: 10px;
+    }
+
+    .logo-image-wrap {
+      position: relative;
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.05);
+      border: 2px dashed rgba(212, 168, 67, 0.3);
+      cursor: pointer;
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+    .logo-image-wrap:hover { border-color: var(--gold); background: rgba(212,168,67,0.05); }
+    .logo-image-wrap.has-image { border-style: solid; border-color: transparent; background: transparent; }
+
+    .logo-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 10; }
+    .logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: none;
+      background: rgba(0,0,0,0.2);
+    }
+    .logo-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.65rem;
+      text-align: center;
+      pointer-events: none;
+      padding: 4px;
+    }
+
+    .logo-text-block {
+      display: flex;
+      flex-direction: column;
+    }
+    .logo-brand {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+    .logo-brand div { margin-bottom: 1px; }
+    .logo-sub {
+      font-size: 0.7rem;
+      color: var(--gold);
+      letter-spacing: 1.5px;
+      margin-top: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .year-editable {
+      display: inline-block;
+      min-width: 30px;
+      cursor: text;
+      border-bottom: 1px dashed var(--gold);
+      padding: 0 3px;
+      transition: background 0.2s;
+    }
+    .year-editable:hover, .year-editable:focus {
+      background: rgba(212, 168, 67, 0.15);
+      outline: none;
+    }
+
+    /* ===== 截图按钮 ===== */
+    .screenshot-btn {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      z-index: 100;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, var(--blue-primary), var(--blue-light));
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(74, 144, 217, 0.4);
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 1px;
+    }
+    .screenshot-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(74, 144, 217, 0.5);
+      background: linear-gradient(135deg, var(--blue-light), var(--blue-primary));
+    }
+    .screenshot-btn:active { transform: translateY(0); }
+    .screenshot-btn .cam-icon { font-size: 1.1rem; }
+
+    /* ===== 页脚 ===== */
+    .site-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      padding: 14px;
+      background: rgba(7, 13, 24, 0.92);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(91, 141, 239, 0.1);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      z-index: 100;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== 编辑提示 ===== */
+    .edit-tip {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.62rem;
+      color: var(--blue-light);
+      background: rgba(74, 144, 217, 0.12);
+      padding: 2px 8px;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 0.25s;
+      white-space: nowrap;
+      pointer-events: none;
+      font-weight: 500;
+    }
+    .game-header:hover .edit-tip,
+    .award-box:hover .edit-tip { opacity: 1; }
+
+    /* 空状态占位 */
+    [contenteditable="true"]:empty::before {
+      content: attr(data-placeholder);
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 1024px) {
+      .games-grid { gap: 20px; }
+      .game-name-cn { font-size: 1.25rem; }
+      .award-cn { font-size: 1.8rem; letter-spacing: 4px; }
+      .award-box { padding: 18px 40px; }
+    }
+
+    @media (max-width: 768px) {
+      .capture-area { padding: 32px 16px 110px; justify-content: flex-start; }
+      .games-grid {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+        gap: 24px;
+        margin-bottom: 36px;
+      }
+      .game-card.gold { transform: scale(1); order: -1; } /* 中间卡片在手机上置顶 */
+      .game-card { padding: 18px 14px 14px; }
+      .game-name-cn { font-size: 1.3rem; }
+      .award-box { padding: 16px 32px; }
+      .award-cn { font-size: 1.6rem; letter-spacing: 3px; }
+      .award-en { letter-spacing: 2px; font-size: 0.78rem; }
+      .logo-fixed {
+        bottom: 58px;
+        left: 14px;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo-image-wrap { width: 44px; height: 44px; }
+      .logo-brand { font-size: 0.9rem; }
+      .screenshot-btn {
+        bottom: 58px;
+        right: 14px;
+        padding: 10px 14px;
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .game-name-cn { font-size: 1.15rem; }
+      .award-cn { font-size: 1.35rem; }
+      .award-box { padding: 14px 24px; }
+    }
+
+    /* 辅助 */
+    [contenteditable="true"] { caret-color: var(--blue-light); }
+    ::selection { background: rgba(74, 144, 217, 0.25); color: #fff; }
+
+    /* 截图时的隐藏元素 */
+    .screenshot-loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(7, 13, 24, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      flex-direction: column;
+      gap: 16px;
+      backdrop-filter: blur(5px);
+    }
+    .screenshot-loading.active { display: flex; }
+    .screenshot-loading .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(91, 141, 239, 0.2);
+      border-top-color: var(--blue-light);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .screenshot-loading p { color: var(--text-dim); font-size: 0.9rem; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+
+  <!-- 像素网格背景 -->
+  <div class="pixel-grid"></div>
+
+  <!-- 像素星星装饰（由JS生成更多） -->
+  <div class="pixel-star" style="top:10%;left:8%;animation-delay:0s;"></div>
+  <div class="pixel-star gold" style="top:15%;left:85%;animation-delay:0.5s;"></div>
+  <div class="pixel-star white" style="top:60%;left:5%;animation-delay:1s;"></div>
+  <div class="pixel-star" style="top:75%;left:90%;animation-delay:1.5s;"></div>
+  <div class="pixel-star gold" style="top:30%;left:95%;animation-delay:0.8s;"></div>
+  <div class="pixel-star white" style="top:45%;left:2%;animation-delay:2s;"></div>
+  <div class="pixel-star" style="top:85%;left:50%;animation-delay:1.2s;"></div>
+  <div class="pixel-star gold" style="top:5%;left:50%;animation-delay:0.3s;"></div>
+  <div class="pixel-star white" style="top:25%;left:25%;animation-delay:1.8s;"></div>
+  <div class="pixel-star" style="top:70%;left:75%;animation-delay:0.6s;"></div>
+
+  <!-- 像素块装饰 -->
+  <div class="pixel-block" style="top:20%;left:15%;"></div>
+  <div class="pixel-block" style="top:50%;left:92%;transform:scale(1.5);"></div>
+  <div class="pixel-block" style="top:80%;left:20%;transform:scale(0.8);"></div>
+  <div class="pixel-block" style="top:35%;left:80%;"></div>
+
+  <!-- 浮动游戏元素 -->
+  <div class="game-deco" style="top:12%;left:12%;animation-delay:0s;">🎮</div>
+  <div class="game-deco" style="top:70%;left:88%;animation-delay:1s;">👾</div>
+  <div class="game-deco" style="top:40%;left:5%;animation-delay:2s;font-size:1.8rem;">⭐</div>
+  <div class="game-deco" style="top:85%;left:15%;animation-delay:0.5s;font-size:1.6rem;">🏆</div>
+  <div class="game-deco" style="top:20%;left:90%;animation-delay:1.5s;font-size:1.9rem;">💎</div>
+  <div class="game-deco" style="top:55%;left:92%;animation-delay:0.8s;font-size:1.5rem;">🎯</div>
+  <div class="game-deco" style="top:8%;left:70%;animation-delay:2.2s;font-size:1.7rem;">🕹️</div>
+  <div class="game-deco" style="top:90%;left:70%;animation-delay:1.2s;font-size:1.6rem;">⚔️</div>
+  <div class="game-deco" style="top:45%;left:12%;animation-delay:0.3s;font-size:1.4rem;">🛡️</div>
+  <div class="game-deco" style="top:25%;left:40%;animation-delay:1.8s;font-size:2rem;">❤️</div>
+
+  <!-- 截图加载遮罩 -->
+  <div class="screenshot-loading" id="screenshotLoading">
+    <div class="spinner"></div>
+    <p>正在生成截图…</p>
+  </div>
+
+  <!-- 主内容区（截图范围） -->
+  <div class="capture-area" id="captureArea">
+
+    <!-- 游戏卡片 -->
+    <div class="games-grid">
+
+      <!-- 提名 1（银） -->
+      <div class="game-card silver">
+        <div class="card-pixels"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="game-header" contenteditable="true" data-placeholder="点击编辑游戏名称">
+          <span class="edit-tip">✎ 点击编辑</span>
+          <div class="game-name-cn">双影奇境</div>
+          <div class="game-name-en">Split Fiction</div>
+        </div>
+        <div class="image-area">
+          <input type="file" class="image-input" accept="image/*" onchange="handleUpload(this)">
+          <button class="btn-remove" onclick="removeImage(this)" title="删除图片">×</button>
+          <img class="game-cover" alt="游戏封面" onload="onImgLoad(this)">
+          <div class="upload-placeholder">
+            <div class="icon">📷</div>
+            <div>点击上传游戏封面</div>
+            <div class="hint">完整尺寸显示</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 获奖（金） -->
+      <div class="game-card gold">
+        <div class="card-pixels"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="game-header" contenteditable="true" data-placeholder="点击编辑游戏名称">
+          <span class="edit-tip">✎ 点击编辑</span>
+          <div class="game-name-cn">死亡搁浅2：冥滩之上</div>
+          <div class="game-name-en">Death Stranding 2: On The Beach</div>
+        </div>
+        <div class="image-area">
+          <input type="file" class="image-input" accept="image/*" onchange="handleUpload(this)">
+          <button class="btn-remove" onclick="removeImage(this)" title="删除图片">×</button>
+          <img class="game-cover" alt="游戏封面" onload="onImgLoad(this)">
+          <div class="upload-placeholder">
+            <div class="icon">📷</div>
+            <div>点击上传游戏封面</div>
+            <div class="hint">完整尺寸显示</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 提名 2（银） -->
+      <div class="game-card silver">
+        <div class="card-pixels"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="game-header" contenteditable="true" data-placeholder="点击编辑游戏名称">
+          <span class="edit-tip">✎ 点击编辑</span>
+          <div class="game-name-cn">空之轨迹 the 1st</div>
+          <div class="game-name-en">Trails in the Sky 1st Chapter</div>
+        </div>
+        <div class="image-area">
+          <input type="file" class="image-input" accept="image/*" onchange="handleUpload(this)">
+          <button class="btn-remove" onclick="removeImage(this)" title="删除图片">×</button>
+          <img class="game-cover" alt="游戏封面" onload="onImgLoad(this)">
+          <div class="upload-placeholder">
+            <div class="icon">📷</div>
+            <div>点击上传游戏封面</div>
+            <div class="hint">完整尺寸显示</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 奖项名称 -->
+    <div class="award-section">
+      <div class="award-box" contenteditable="true" data-placeholder="点击编辑奖项名称">
+        <span class="edit-tip">✎ 点击编辑</span>
+        <div class="award-en">GAME OF THE YEAR 2025</div>
+        <div class="award-divider"></div>
+        <div class="award-cn">年度游戏（新）</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 左下角固定 Logo -->
+  <div class="logo-fixed">
+    <div class="logo-image-wrap" id="logoWrap">
+      <input type="file" class="logo-input" accept="image/*" onchange="handleLogoUpload(this)">
+      <img class="logo-img" id="logoImg" alt="LOGO">
+      <div class="logo-placeholder" id="logoPlaceholder">上传<br>LOGO</div>
+    </div>
+    <div class="logo-text-block">
+      <div class="logo-brand">
+        <div>BISCUIT</div>
+        <div>GAME</div>
+        <div>AWARDS</div>
+      </div>
+      <div class="logo-sub">
+        BEST GAME OF <span class="year-editable" id="yearEdit" contenteditable="true">2025</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 截图按钮 -->
+  <button class="screenshot-btn" onclick="takeScreenshot()">
+    <span class="cam-icon">📸</span>
+    <span>截图保存</span>
+  </button>
+
+  <!-- 页脚 -->
+  <footer class="site-footer">
+    © <span id="footerYear">2025</span> BISCUIT GAME AWARDS. All Rights Reserved.
+  </footer>
+
+  <script>
+    /* ===== 图片上传 ===== */
+    function handleUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) { alert("请上传图片文件"); input.value = ""; return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const area = input.closest(".image-area");
+        const img = area.querySelector(".game-cover");
+        const placeholder = area.querySelector(".upload-placeholder");
+        img.src = e.target.result;
+        img.style.display = "block";
+        placeholder.style.display = "none";
+        area.classList.add("has-image");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function onImgLoad(img) { /* 预留 */ }
+
+    function removeImage(btn) {
+      const area = btn.closest(".image-area");
+      const input = area.querySelector(".image-input");
+      const img = area.querySelector(".game-cover");
+      const placeholder = area.querySelector(".upload-placeholder");
+      img.src = ""; img.style.display = "none";
+      placeholder.style.display = "flex";
+      area.classList.remove("has-image");
+      input.value = "";
+    }
+
+    /* ===== LOGO 上传 ===== */
+    function handleLogoUpload(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) { alert("请上传图片文件"); input.value = ""; return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const wrap = document.getElementById("logoWrap");
+        const img = document.getElementById("logoImg");
+        const placeholder = document.getElementById("logoPlaceholder");
+        img.src = e.target.result;
+        img.style.display = "block";
+        placeholder.style.display = "none";
+        wrap.classList.add("has-image");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /* ===== 编辑增强 ===== */
+    document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+      el.addEventListener("paste", function(e) {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+        document.execCommand("insertText", false, text);
+      });
+      el.addEventListener("keydown", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (el.classList.contains("award-box") || el.closest(".award-box")) {
+            document.execCommand("insertLineBreak");
+          } else {
+            el.blur();
+          }
+        }
+      });
+    });
+
+    /* ===== 年份联动 ===== */
+    const yearEdit = document.getElementById("yearEdit");
+    const footerYear = document.getElementById("footerYear");
+    if (yearEdit && footerYear) {
+      yearEdit.addEventListener("input", () => { footerYear.textContent = yearEdit.textContent; });
+    }
+
+    /* ===== 截图功能 ===== */
+    async function takeScreenshot() {
+      const loading = document.getElementById("screenshotLoading");
+      loading.classList.add("active");
+
+      // 短暂延迟确保UI更新
+      await new Promise(r => setTimeout(r, 200));
+
+      try {
+        const element = document.getElementById("captureArea");
+        const canvas = await html2canvas(element, {
+          backgroundColor: "#070d18",
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          onclone: function(clonedDoc) {
+            // 确保克隆后的元素也应用了正确的背景
+            clonedDoc.body.style.background = "#070d18";
+          }
+        });
+
+        const link = document.createElement("a");
+        link.download = "Biscuit_Game_Awards_" + new Date().getTime() + ".png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } catch (err) {
+        console.error(err);
+        alert("截图失败，请重试");
+      } finally {
+        loading.classList.remove("active");
+      }
+    }
+
+    /* ===== 点击空白处取消焦点 ===== */
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest('[contenteditable="true"]')) {
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => el.blur());
+      }
+    });
+  </script>
+
+</body>
+</html>
